@@ -1,0 +1,318 @@
+---
+title: "Exercise1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Exploratory analysis: green buildings
+
+An Austin real-estate developer is interested in the possible economic impact of "going green" in her latest project: a new 15-story mixed-use building on East Cesar Chavez, just across I-35 from downtown. Will investing in a green building be worth it, from an economic perspective? The baseline construction costs are $100 million, with a 5% expected premium for green certification.
+
+Do you agree with the conclusions of her on-staff stats guru? If so, point to evidence supporting his case. If not, explain specifically where and why the analysis goes wrong, and how it can be improved.
+
+```{r cars}
+library(mosaic)
+green = read.csv('greenbuildings.csv')
+green = subset(green, leasing_rate >= 10)
+summary(green)
+```
+
+What effect rent?
+```{r}
+lm.fit.green = lm(Rent~., data = green)
+summary(lm.fit.green)
+```
+
+```{r}
+green_only = subset(green, green_rating==1)
+non_green = subset(green, green_rating==0)
+```
+```{r}
+# How does siz effect rant?
+median(green$size)
+median(non_green$size)
+median(green_only$size)
+green_only_15 = subset(green_only, stories == 15)
+median(green_only_15$size)
+```
+```{r}
+plot(Rent ~ size, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(green$Rent~green$size))
+abline(v=median(green_only$size), col='red')
+abline(v=median(green_only_15$size), col='red')
+#figure out how much difference is from green and size. Use multiple variable regression, build trunks
+```
+```{r}
+#How does the employment growth rate effect rent?
+plot(Rent ~ empl_gr, data=green, pch=19, cex=0.5, col='brown')
+```
+```{r}
+#Leasing rate
+median(green$leasing_rate)
+median(non_green$leasing_rate)
+median(green_only$leasing_rate)
+green_only_15 = subset(green_only, stories == 15)
+median(green_only_15$leasing_rate)
+```
+
+```{r}
+#stories
+plot(Rent ~ stories, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(green$Rent~green$stories))
+abline(v=11, col='red')
+abline(v=15, col='red')
+```
+```{r}
+median(green$stories)
+median(non_green$stories)
+median(green_only$stories)
+#green_only_15 = subset(green_only, stories == 15)
+#median(green_only_15$leasing_rate)
+```
+```{r}
+#age
+plot(Rent ~ age, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(green$Rent~green$age))
+```
+```{r}
+median(green$age)
+median(non_green$age)
+median(green_only$age)
+median(subset(green_only, stories == 15)$age)
+```
+```{r}
+# class
+class=ifelse(green$class_a == 1 ,"a",ifelse(green$class_b == 1 ,"b","c"))
+green_2 =data.frame(green,class)
+bwplot(Rent ~ class, data=green_2)
+#abline(lm(green$Rent~green$age))
+```
+```{r}
+table1=xtabs(~green_rating + class, data=green)
+prop.table(table1, margin=1)
+```
+```{r}
+#net
+median(subset(green_only, net == 1)$Rent)
+median(subset(green_only, net == 0)$Rent)
+```
+```{r}
+table1=xtabs(~green_rating + net, data=green)
+prop.table(table1, margin=1)
+```
+```{r}
+#amenities
+median(subset(green, amenities == 1)$Rent)
+median(subset(green, amenities == 0)$Rent)
+```
+
+```{r}
+#hd_total07
+plot(Rent ~ hd_total07, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(green$Rent~green$hd_total07))#?
+```
+```{r}
+mean(green$hd_total07)
+mean(non_green$hd_total07)
+mean(green_only$hd_total07)
+mean(subset(green_only, stories == 15)$hd_total07)
+```
+```{r}
+#Precipitation
+plot(Rent ~ Precipitation, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(green$Rent~green$Precipitation))
+```
+```{r}
+mean(green$Precipitation)
+mean(non_green$Precipitation)
+mean(green_only$Precipitation)
+mean(subset(green_only, stories == 15)$Precipitation)
+```
+```{r}
+#Gas_Costs
+plot(Rent ~ Gas_Costs, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(non_green$Rent~non_green$Gas_Costs))
+abline(lm(green_only$Rent~green_only$Gas_Costs),col='blue')
+```
+```{r}
+#Electricity_Costs
+plot(Rent ~ Electricity_Costs, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(non_green$Rent~non_green$Electricity_Costs))
+abline(lm(green_only$Rent~green_only$Electricity_Costs),col='blue')
+```
+```{r}
+#cluster_rent
+plot(Rent ~ cluster_rent, data=green, pch=19, cex=0.5, col='brown')
+abline(lm(non_green$Rent~non_green$cluster_rent))
+abline(lm(green_only$Rent~green_only$cluster_rent),col='blue')
+```
+
+
+
+## Bootstrapping
+
+1.marshals appropriate evidence to characterize the risk/return properties of the five major asset classes listed above.
+```{r}
+library(mosaic)
+library(quantmod)
+library(foreach)
+mystocks = c("SPY", "TLT", "LQD", "EEM", "VNQ")
+myprices = getSymbols(mystocks, from = "2007-01-01")
+```
+```{r}
+for(ticker in mystocks) {
+	expr = paste0(ticker, "a = adjustOHLC(", ticker, ")")
+	eval(parse(text=expr))
+}
+head(SPYa)
+```
+```{r}
+plot(ClCl(SPYa))
+```
+```{r}
+plot(ClCl(TLTa))
+```
+```{r}
+plot(ClCl(LQDa))
+```
+```{r}
+plot(ClCl(EEMa))
+```
+2008.7 EEM reduce the stork volume and the price increased three times.
+```{r}
+plot(ClCl(VNQa))
+```
+```{r}
+all_returns = cbind(	ClCl(SPYa),
+								ClCl(TLTa),
+								ClCl(LQDa),
+								ClCl(EEMa),
+								ClCl(VNQa))
+head(all_returns)
+all_returns = as.matrix(na.omit(all_returns))
+```
+```{r}
+pairs(all_returns)
+```
+
+2. outlines your choice of the "safe" and "aggressive" portfolios.
+    a. the even split: 20% of your assets in each of the five ETFs above.
+    b. something that seems safer than the even split, comprising investments in at least three classes. 
+    c. something more aggressive  comprising investments in at least two classes/assets. 
+```{r}
+my_weights1 = c(0.2,0.2,0.2, 0.2, 0.2)
+my_weights2 = c(0.1,0.4,0.4, 0.1, 0.0)
+my_weights3 = c(0.4,0.0,0.0, 0.2, 0.4)
+```
+
+3.uses bootstrap resampling to estimate the 4-week (20 trading day) value at risk of each of your three portfolios at the 5% level.
+
+```{r}
+#even split
+set.seed(1)
+sim1 = foreach(i=1:5000, .combine='rbind') %do% {
+  total_wealth = 100000
+  holdings1 = my_weights1 * total_wealth
+  n_days = 20
+  wealthtracker1 = rep(0, n_days) 
+  for(today in 1:n_days) {
+  	return.today = resample(all_returns, 1, orig.ids=FALSE)
+  	holdings1 = holdings1 + holdings1*return.today
+	  total_wealth1 = sum(holdings1)
+	  wealthtracker1[today] = total_wealth1
+  	holdings1 = my_weights1 * total_wealth1 #reblance the acounts after daily growth
+  }
+  wealthtracker1
+}
+head(sim1)
+hist(sim1[,n_days], 25)
+```
+```{r}
+mean(sim1[,n_days])
+sqrt(var(sim1[,n_days]))
+hist(sim1[,n_days]- 100000, breaks=30)
+quantile(sim1[,n_days], 0.05) - 100000
+```
+
+```{r}
+#safe portfolio
+set.seed(1)
+sim2 = foreach(i=1:5000, .combine='rbind') %do% {
+  total_wealth = 100000
+  holdings2 = my_weights2 * total_wealth
+  n_days = 20
+  wealthtracker2 = rep(0, n_days) 
+  for(today in 1:n_days) {
+    #set.seed(1)
+	  return.today = resample(all_returns, 1, orig.ids=FALSE)
+	  holdings2 = holdings2 + holdings2*return.today
+	  total_wealth2 = sum(holdings2)
+	  wealthtracker2[today] = total_wealth2
+	  holdings2 = my_weights2 * total_wealth2 #reblance the acounts after daily growth
+  }
+  wealthtracker2
+}
+#total_wealth
+#plot(wealthtracker2, type='l')
+head(sim2)
+hist(sim2[,n_days], 25)
+```
+```{r}
+mean(sim2[,n_days])
+sqrt(var(sim2[,n_days]))
+hist(sim2[,n_days]- 100000, breaks=30)
+quantile(sim2[,n_days], 0.05) - 100000
+```
+```{r}
+#aggrasive portfolio
+set.seed(1)
+sim3 = foreach(i=1:5000, .combine='rbind') %do% {
+  total_wealth = 100000
+  holdings3 = my_weights3 * total_wealth
+  n_days = 20
+  wealthtracker3 = rep(0, n_days) 
+  for(today in 1:n_days) {
+	  return.today = resample(all_returns, 1, orig.ids=FALSE)
+	  holdings3 = holdings3 + holdings3*return.today
+	  total_wealth3 = sum(holdings3)
+	  wealthtracker3[today] = total_wealth3
+	  holdings3 = my_weights3 * total_wealth3 #reblance the acounts after daily growth
+  }
+  wealthtracker3
+}
+#total_wealth
+#plot(wealthtracker2, type='l')
+head(sim3)
+hist(sim3[,n_days], 25)
+```
+```{r}
+mean(sim3[,n_days])
+sqrt(var(sim3[,n_days]))
+hist(sim3[,n_days]- 100000, breaks=30)
+quantile(sim3[,n_days], 0.05) - 100000
+```
+
+3.compares the results for each portfolio in a way that would allow the reader to make an intelligent decision among the three options.
+
+## Market segmentation
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
